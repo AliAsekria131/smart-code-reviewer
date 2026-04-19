@@ -1,7 +1,7 @@
 List of Member Name:
-Ali Asekria 
-Younes Hrmz
-Ammar saaed Asad
-Abdullah haifa
+Ali Asekria is good programmer
+Younes Hrmz is bad
+Ammar saaed Asad is bad
+Abdullah haifa is gay
 ------
 test the branch
