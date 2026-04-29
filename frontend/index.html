@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Code Reviewer</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0d1117; color: #e2e8f0;
+      min-height: 100vh; padding: 40px 20px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 2rem; color: #60a5fa; margin-bottom: 8px; }
+    .subtitle { color: #6b7280; margin-bottom: 40px; }
+
+    /* منطقة الرفع */
+    .upload-area {
+      border: 2px dashed #374151; border-radius: 12px;
+      padding: 48px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 20px;
+    }
+    .upload-area:hover,
+    .upload-area.drag-over { border-color: #60a5fa; background: rgba(96,165,250,0.05); }
+    .upload-icon { font-size: 3rem; margin-bottom: 12px; }
+    .upload-text { color: #6b7280; }
+    .file-selected { color: #60a5fa; font-weight: bold; margin-top: 8px; }
+
+    /* زر التحليل */
+    #analyzeBtn {
+      width: 100%; padding: 14px;
+      background: #2563eb; color: white;
+      border: none; border-radius: 8px;
+      font-size: 1rem; cursor: pointer;
+      transition: background 0.2s;
+    }
+    #analyzeBtn:hover:not(:disabled) { background: #1d4ed8; }
+    #analyzeBtn:disabled { background: #374151; cursor: not-allowed; color: #6b7280; }
+
+    /* شاشة التحميل */
+    #loading {
+      display: none; text-align: center;
+      padding: 40px; color: #60a5fa;
+    }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid #1e293b;
+      border-top-color: #60a5fa; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* التقرير */
+    #report { display: none; margin-top: 40px; }
+
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin-bottom: 32px;
+    }
+    .summary-card {
+      background: #1e293b; border-radius: 10px;
+      padding: 20px; text-align: center; border: 1px solid #334155;
+    }
+    .summary-card .num {
+      font-size: 2.2rem; font-weight: bold; display: block; margin-bottom: 4px;
+    }
+    .summary-card .lbl { font-size: 0.8rem; color: #94a3b8; }
+    .green .num { color: #22c55e; }
+    .amber .num { color: #f59e0b; }
+    .red   .num { color: #ef4444; }
+
+    /* أقسام التقرير */
+    .section {
+      background: #1e293b; border-radius: 10px;
+      padding: 24px; margin-bottom: 20px; border: 1px solid #334155;
+    }
+    .section h3 {
+      font-size: 1rem; color: #60a5fa; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .issue-item {
+      display: flex; gap: 10px; padding: 10px 0;
+      border-bottom: 1px solid #0f172a; font-size: 0.85rem;
+    }
+    .issue-item:last-child { border-bottom: none; }
+    .line-badge {
+      background: #0f172a; color: #60a5fa;
+      padding: 2px 8px; border-radius: 4px;
+      font-family: monospace; font-size: 0.75rem;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .sev-high   { color: #ef4444; }
+    .sev-medium { color: #f59e0b; }
+
+    /* تحليل AI */
+    .ai-section {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border: 1px solid #3b82f6; border-radius: 10px; padding: 24px;
+      margin-bottom: 20px;
+    }
+    .ai-section h3 { color: #60a5fa; margin-bottom: 16px; font-size: 1rem; }
+    .ai-content {
+      color: #cbd5e1; line-height: 1.8; font-size: 0.88rem;
+      white-space: pre-wrap;
+    }
+    .ai-content strong { color: #e2e8f0; }
+
+    /* رسالة خطأ */
+    .error-msg {
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5; padding: 14px 18px; border-radius: 8px;
+      margin-top: 16px; display: none;
+    }
+    .no-issues { color: #22c55e; font-size: 0.85rem; padding: 8px 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🔍 Smart Code Reviewer</h1>
+  <p class="subtitle">ارفع ملف Python واحصل على تقرير مراجعة ذكي</p>
+
+  <!-- منطقة الرفع -->
+  <div class="upload-area" id="uploadArea">
+    <div class="upload-icon">📂</div>
+    <p class="upload-text">اضغط لاختيار ملف .py</p>
+    <p class="file-selected" id="fileName"></p>
+    <input type="file" id="fileInput"
+           accept=".py" style="display:none">
+  </div>
+
+  <button id="analyzeBtn" disabled>اختر ملفاً أولاً</button>
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- شاشة التحميل -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>جاري التحليل بـ Gemini AI...</p>
+  </div>
+
+  <!-- التقرير -->
+  <div id="report"></div>
+
+</div>
+
+<script src="main.js">
+</script>
+</body>
+</html>
